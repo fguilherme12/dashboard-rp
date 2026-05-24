@@ -167,7 +167,7 @@ function DemandForm({ demand, attendants, onSave, onClose }: DemandFormProps) {
         </div>
         <div>
           <label className="mb-1.5 block text-xs font-medium uppercase tracking-wider text-muted">
-            Hora Atendida
+            Hora Atendida (opcional)
           </label>
           <Input
             type="time"

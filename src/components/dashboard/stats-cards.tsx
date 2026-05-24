@@ -1,7 +1,6 @@
 "use client";
 
 import { Card } from "@/components/ui/card";
-import { LiveClock } from "@/components/layout/live-clock";
 import type { DashboardStats } from "@/lib/types";
 import { formatDuration, getTodayBR } from "@/lib/utils";
 import {
@@ -15,9 +14,10 @@ import {
 
 interface StatsCardsProps {
   stats: DashboardStats;
+  action?: React.ReactNode;
 }
 
-export function StatsCards({ stats }: StatsCardsProps) {
+export function StatsCards({ stats, action }: StatsCardsProps) {
   const cards = [
     {
       label: "Total",
@@ -51,7 +51,7 @@ export function StatsCards({ stats }: StatsCardsProps) {
 
   return (
     <div>
-      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex items-start gap-3">
           <ClipboardList className="h-7 w-7 text-accent-green mt-0.5 shrink-0" />
           <div>
@@ -61,7 +61,7 @@ export function StatsCards({ stats }: StatsCardsProps) {
             <p className="text-sm text-muted capitalize mt-0.5">{getTodayBR()}</p>
           </div>
         </div>
-        <LiveClock />
+        {action}
       </div>
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">

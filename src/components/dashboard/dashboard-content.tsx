@@ -1,9 +1,13 @@
 "use client";
 
+import { DemandModal } from "@/components/demandas/demand-modal";
 import { StatsCards } from "@/components/dashboard/stats-cards";
+import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/pagination";
-import { getDashboardStats } from "@/lib/services/demands";
-import type { DashboardStats } from "@/lib/types";
+import { getAllAttendants } from "@/lib/services/attendants";
+import { createDemand, getDashboardStats } from "@/lib/services/demands";
+import type { Attendant, DashboardStats, DemandFormData } from "@/lib/types";
+import { Plus } from "lucide-react";
 import { useEffect, useState } from "react";
 
 const emptyStats: DashboardStats = {
@@ -16,22 +20,48 @@ const emptyStats: DashboardStats = {
 
 export function DashboardContent() {
   const [stats, setStats] = useState<DashboardStats>(emptyStats);
+  const [attendants, setAttendants] = useState<Attendant[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [modalOpen, setModalOpen] = useState(false);
+
+  async function loadStats() {
+    const data = await getDashboardStats();
+    setStats(data);
+  }
 
   useEffect(() => {
+    let active = true;
+
     async function load() {
       try {
-        const data = await getDashboardStats();
-        setStats(data);
+        const [statsData, attendantsList] = await Promise.all([
+          getDashboardStats(),
+          getAllAttendants(),
+        ]);
+        if (!active) return;
+        setStats(statsData);
+        setAttendants(attendantsList);
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Erro ao carregar dashboard");
+        if (!active) return;
+        setError(
+          err instanceof Error ? err.message : "Erro ao carregar dashboard"
+        );
       } finally {
-        setLoading(false);
+        if (active) setLoading(false);
       }
     }
+
     load();
+    return () => {
+      active = false;
+    };
   }, []);
+
+  async function handleSave(data: DemandFormData) {
+    await createDemand(data);
+    await loadStats();
+  }
 
   if (loading) return <EmptyState message="Carregando dashboard..." />;
 
@@ -43,5 +73,24 @@ export function DashboardContent() {
     );
   }
 
-  return <StatsCards stats={stats} />;
+  return (
+    <>
+      <StatsCards
+        stats={stats}
+        action={
+          <Button onClick={() => setModalOpen(true)}>
+            <Plus className="h-4 w-4" />
+            Nova Demanda
+          </Button>
+        }
+      />
+
+      <DemandModal
+        open={modalOpen}
+        onClose={() => setModalOpen(false)}
+        onSave={handleSave}
+        attendants={attendants}
+      />
+    </>
+  );
 }

@@ -64,6 +64,21 @@ export async function updateDemand(
   return data as Demand;
 }
 
+export async function getDemandById(id: string): Promise<Demand | null> {
+  const { data, error } = await supabase
+    .from("demands")
+    .select("*, attendant:attendants(*)")
+    .eq("id", id)
+    .single();
+
+  if (error) {
+    if (error.code === "PGRST116") return null;
+    throw error;
+  }
+
+  return data as Demand;
+}
+
 export async function deleteDemand(id: string): Promise<void> {
   const { error } = await supabase.from("demands").delete().eq("id", id);
   if (error) throw error;
@@ -106,17 +121,12 @@ export async function getDashboardStats(): Promise<DashboardStats> {
 function buildPayload(form: Partial<DemandFormData>) {
   const payload: Record<string, unknown> = { ...form };
 
-  if (form.status === "em_atendimento" && !form.service_time) {
-    const now = new Date();
-    payload.service_time = now.toTimeString().slice(0, 8);
+  if (form.service_time === "") {
+    payload.service_time = null;
   }
 
   if (form.status === "finalizada") {
     payload.completion_time = new Date().toISOString();
-    if (!form.service_time) {
-      const now = new Date();
-      payload.service_time = now.toTimeString().slice(0, 8);
-    }
   }
 
   if (form.status === "pendente") {
