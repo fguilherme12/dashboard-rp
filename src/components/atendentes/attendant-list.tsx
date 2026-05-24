@@ -1,7 +1,9 @@
 "use client";
 
 import { AttendantModal } from "@/components/atendentes/attendant-modal";
+import { AlertDialog } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Card } from "@/components/ui/card";
 import { EmptyState, PageHeader, Pagination } from "@/components/ui/pagination";
 import {
@@ -23,6 +25,8 @@ export function AttendantList() {
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<Attendant | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [alertMessage, setAlertMessage] = useState<string | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -66,13 +70,16 @@ export function AttendantList() {
     await reload();
   }
 
-  async function handleDelete(id: string) {
-    if (!confirm("Deseja excluir este atendente?")) return;
+  async function confirmDelete() {
+    if (!deleteId) return;
     try {
-      await deleteAttendant(id);
+      await deleteAttendant(deleteId);
       await reload();
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Erro ao excluir");
+      setAlertMessage(
+        err instanceof Error ? err.message : "Erro ao excluir atendente"
+      );
+      throw err;
     }
   }
 
@@ -142,7 +149,7 @@ export function AttendantList() {
                         <Button
                           variant="danger"
                           size="sm"
-                          onClick={() => handleDelete(attendant.id)}
+                          onClick={() => setDeleteId(attendant.id)}
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>
@@ -175,7 +182,7 @@ export function AttendantList() {
                   <Button
                     variant="danger"
                     size="sm"
-                    onClick={() => handleDelete(attendant.id)}
+                    onClick={() => setDeleteId(attendant.id)}
                   >
                     <Trash2 className="h-4 w-4" />
                   </Button>
@@ -193,6 +200,19 @@ export function AttendantList() {
         onClose={() => setModalOpen(false)}
         onSave={handleSave}
         attendant={editing}
+      />
+
+      <ConfirmDialog
+        open={deleteId !== null}
+        onClose={() => setDeleteId(null)}
+        onConfirm={confirmDelete}
+        message="Deseja excluir este atendente? Esta ação não pode ser desfeita."
+      />
+
+      <AlertDialog
+        open={alertMessage !== null}
+        onClose={() => setAlertMessage(null)}
+        message={alertMessage ?? ""}
       />
     </>
   );

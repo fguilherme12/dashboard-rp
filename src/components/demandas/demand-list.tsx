@@ -1,9 +1,11 @@
 "use client";
 
 import { DemandModal } from "@/components/demandas/demand-modal";
+import { AlertDialog } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { EmptyState, PageHeader, Pagination } from "@/components/ui/pagination";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
@@ -35,6 +37,8 @@ export function DemandList() {
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<Demand | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [alertMessage, setAlertMessage] = useState<string | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -86,13 +90,16 @@ export function DemandList() {
     await reload();
   }
 
-  async function handleDelete(id: string) {
-    if (!confirm("Deseja excluir esta demanda?")) return;
+  async function confirmDelete() {
+    if (!deleteId) return;
     try {
-      await deleteDemand(id);
+      await deleteDemand(deleteId);
       await reload();
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Erro ao excluir");
+      setAlertMessage(
+        err instanceof Error ? err.message : "Erro ao excluir demanda"
+      );
+      throw err;
     }
   }
 
@@ -104,7 +111,9 @@ export function DemandList() {
       await updateDemand(id, field);
       await reload();
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Erro ao atualizar");
+      setAlertMessage(
+        err instanceof Error ? err.message : "Erro ao atualizar demanda"
+      );
     }
   }
 
@@ -223,7 +232,7 @@ export function DemandList() {
                     <Button
                       variant="danger"
                       size="sm"
-                      onClick={() => handleDelete(demand.id)}
+                      onClick={() => setDeleteId(demand.id)}
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>
@@ -322,7 +331,7 @@ export function DemandList() {
                     <Button
                       variant="danger"
                       size="sm"
-                      onClick={() => handleDelete(demand.id)}
+                      onClick={() => setDeleteId(demand.id)}
                     >
                       <Trash2 className="h-4 w-4" />
                       Excluir
@@ -343,6 +352,19 @@ export function DemandList() {
         onSave={handleSave}
         demand={editing}
         attendants={attendants}
+      />
+
+      <ConfirmDialog
+        open={deleteId !== null}
+        onClose={() => setDeleteId(null)}
+        onConfirm={confirmDelete}
+        message="Deseja excluir esta demanda? Esta ação não pode ser desfeita."
+      />
+
+      <AlertDialog
+        open={alertMessage !== null}
+        onClose={() => setAlertMessage(null)}
+        message={alertMessage ?? ""}
       />
     </>
   );
