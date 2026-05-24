@@ -1,36 +1,90 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Dashboard RP — CCO / Atendimento
 
-## Getting Started
+Dashboard Next.js para gestão de demandas e atendentes do CCO, com persistência via Supabase.
 
-First, run the development server:
+## Funcionalidades
+
+- **Dashboard** — cards com total, pendentes, em atendimento, finalizadas e média de tempo
+- **Atendentes** — CRUD completo com modal, paginação e cards no mobile
+- **Demandas** — CRUD completo com edição inline (atendente, status, comentário), paginação e cards no mobile
+- **Sidebar** — navegação entre rotas `/dashboard`, `/atendentes` e `/demandas`
+
+## Stack
+
+- Next.js 16 (App Router)
+- TypeScript
+- Tailwind CSS 4
+- Supabase (PostgreSQL + API REST)
+- Lucide React (ícones)
+
+## Configuração local
+
+### 1. Instalar dependências
+
+```bash
+npm install
+```
+
+### 2. Configurar Supabase
+
+1. Crie um projeto em [supabase.com](https://supabase.com)
+2. No **SQL Editor**, execute o script `supabase/schema.sql`
+3. Em **Project Settings → API**, copie a URL e a chave `anon public`
+
+### 3. Variáveis de ambiente
+
+Copie o arquivo de exemplo e preencha:
+
+```bash
+cp .env.local.example .env.local
+```
+
+```env
+NEXT_PUBLIC_SUPABASE_URL=https://seu-projeto.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=sua-chave-anon
+```
+
+### 4. Rodar em desenvolvimento
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Acesse [http://localhost:3000](http://localhost:3000)
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Deploy na Vercel
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+1. Faça push do repositório para o GitHub
+2. Importe o projeto na [Vercel](https://vercel.com)
+3. Adicione as variáveis de ambiente:
+   - `NEXT_PUBLIC_SUPABASE_URL`
+   - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+4. Deploy automático — a Vercel detecta Next.js nativamente
 
-## Learn More
+## Estrutura do banco
 
-To learn more about Next.js, take a look at the following resources:
+### `attendants`
+| Campo | Tipo |
+|-------|------|
+| id | UUID |
+| name | TEXT |
+| created_at | TIMESTAMPTZ |
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### `demands`
+| Campo | Tipo |
+|-------|------|
+| id | UUID |
+| date | DATE |
+| demand_time | TIME |
+| type | TEXT (`TMS`, `TMS+CSV`) |
+| requester | TEXT |
+| attendant_id | UUID (FK) |
+| service_time | TIME |
+| completion_time | TIMESTAMPTZ |
+| status | TEXT (`pendente`, `em_atendimento`, `finalizada`) |
+| comment | TEXT |
+| created_at | TIMESTAMPTZ |
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Segurança
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+As políticas RLS atuais são permissivas para facilitar o uso sem autenticação. Para produção, recomenda-se implementar autenticação Supabase Auth e restringir as políticas RLS.
