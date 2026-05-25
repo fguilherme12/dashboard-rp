@@ -25,15 +25,16 @@ async function buildSearchOrClause(term: string): Promise<string | null> {
   if (requestersRes.error) throw requestersRes.error;
   if (attendantsRes.error) throw attendantsRes.error;
 
-  const parts = [`comment.ilike.${pattern}`];
+  const escaped = term.replace(/"/g, '\\"');
+  const parts = [`comment.ilike."%${escaped}%"`];
   const requesterIds = requestersRes.data?.map((r) => r.id) ?? [];
   const attendantIds = attendantsRes.data?.map((a) => a.id) ?? [];
 
-  if (requesterIds.length > 0) {
-    parts.push(`requester_id.in.(${requesterIds.join(",")})`);
+  for (const id of requesterIds) {
+    parts.push(`requester_id.eq.${id}`);
   }
-  if (attendantIds.length > 0) {
-    parts.push(`attendant_id.in.(${attendantIds.join(",")})`);
+  for (const id of attendantIds) {
+    parts.push(`attendant_id.eq.${id}`);
   }
 
   return parts.join(",");
@@ -61,32 +62,28 @@ function applyDemandFilters(
   return query;
 }
 
-async function applySearchFilter(
+function applySearchFilter(
   query: DemandsQuery,
-  filters?: DemandFilters
-): Promise<DemandsQuery> {
-  const term = filters?.search?.trim();
-  if (!term) return query;
-
-  const orClause = await buildSearchOrClause(term);
+  orClause: string | null
+): DemandsQuery {
   if (!orClause) return query;
-
   return query.or(orClause);
 }
 
 export async function getAllDemands(
   filters?: DemandFilters
 ): Promise<Demand[]> {
+  const term = filters?.search?.trim();
+  const orClause = term ? await buildSearchOrClause(term) : null;
+
   let query = supabase.from("demands").select(demandSelect);
 
   query = applyDemandFilters(query, filters);
-  query = await applySearchFilter(query, filters);
+  query = applySearchFilter(query, orClause);
 
-  query = query
+  const { data, error } = await query
     .order("date", { ascending: false })
     .order("demand_time", { ascending: false });
-
-  const { data, error } = await query;
   if (error) throw error;
   return (data ?? []) as Demand[];
 }
@@ -99,18 +96,20 @@ export async function getDemands(
   const from = (page - 1) * pageSize;
   const to = from + pageSize - 1;
 
+  const term = filters?.search?.trim();
+  const orClause = term ? await buildSearchOrClause(term) : null;
+
   let query = supabase
     .from("demands")
     .select(demandSelect, { count: "exact" });
 
   query = applyDemandFilters(query, filters);
-  query = await applySearchFilter(query, filters);
+  query = applySearchFilter(query, orClause);
 
-  query = query
+  const { data, error, count } = await query
     .order("date", { ascending: false })
-    .order("demand_time", { ascending: false });
-
-  const { data, error, count } = await query.range(from, to);
+    .order("demand_time", { ascending: false })
+    .range(from, to);
 
   if (error) throw error;
 
