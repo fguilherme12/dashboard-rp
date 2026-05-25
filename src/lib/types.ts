@@ -1,5 +1,13 @@
 import type { DemandStatus, DemandType } from "./constants";
 
+export interface DemandFilters {
+  status?: DemandStatus | "";
+  attendantId?: string;
+  requesterId?: string;
+  type?: DemandType | "";
+  search?: string;
+}
+
 export interface Attendant {
   id: string;
   name: string;

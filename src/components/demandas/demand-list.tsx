@@ -1,5 +1,10 @@
 "use client";
 
+import {
+  DemandFiltersBar,
+  getEmptyDemandFilters,
+  hasActiveDemandFilters,
+} from "@/components/demandas/demand-filters";
 import { DemandModal } from "@/components/demandas/demand-modal";
 import { AlertDialog } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
@@ -8,7 +13,14 @@ import { Card } from "@/components/ui/card";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { EmptyState, PageHeader, Pagination } from "@/components/ui/pagination";
 import { Select } from "@/components/ui/select";
-import { STATUS_COLORS, STATUS_LABELS, TYPE_LABELS } from "@/lib/constants";
+import {
+  PAGE_SIZE,
+  SEARCH_DEBOUNCE_MS,
+  STATUS_COLORS,
+  STATUS_LABELS,
+  TYPE_LABELS,
+} from "@/lib/constants";
+import { useDebouncedValue } from "@/hooks/use-debounced-value";
 import { getAllAttendants } from "@/lib/services/attendants";
 import { downloadDemandsCsv } from "@/lib/export-demands-csv";
 import {
@@ -19,17 +31,37 @@ import {
   updateDemand,
 } from "@/lib/services/demands";
 import { getAllRequesters } from "@/lib/services/requesters";
-import type { Attendant, Demand, DemandFormData, Requester } from "@/lib/types";
+import type {
+  Attendant,
+  Demand,
+  DemandFilters,
+  DemandFormData,
+  Requester,
+} from "@/lib/types";
 import { formatDateBR, formatDateTimeBR, formatTime } from "@/lib/utils";
 import { Download, Eye, Pencil, Plus, Trash2 } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 export function DemandList() {
   const [demands, setDemands] = useState<Demand[]>([]);
   const [attendants, setAttendants] = useState<Attendant[]>([]);
   const [requesters, setRequesters] = useState<Requester[]>([]);
   const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(PAGE_SIZE);
+  const [filters, setFilters] = useState<DemandFilters>(getEmptyDemandFilters);
+  const [search, setSearch] = useState("");
+  const debouncedSearch = useDebouncedValue(search, SEARCH_DEBOUNCE_MS);
+  const queryFilters = useMemo<DemandFilters>(
+    () => ({ ...filters, search: debouncedSearch }),
+    [
+      filters.status,
+      filters.attendantId,
+      filters.requesterId,
+      filters.type,
+      debouncedSearch,
+    ]
+  );
   const [totalPages, setTotalPages] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -48,7 +80,7 @@ export function DemandList() {
       setError(null);
       try {
         const [demandsResult, attendantsList, requestersList] = await Promise.all([
-          getDemands(page),
+          getDemands(page, pageSize, queryFilters),
           getAllAttendants(),
           getAllRequesters(),
         ]);
@@ -72,11 +104,11 @@ export function DemandList() {
     return () => {
       active = false;
     };
-  }, [page]);
+  }, [page, pageSize, queryFilters]);
 
   async function reload() {
     const [demandsResult, attendantsList, requestersList] = await Promise.all([
-      getDemands(page),
+      getDemands(page, pageSize, queryFilters),
       getAllAttendants(),
       getAllRequesters(),
     ]);
@@ -152,6 +184,10 @@ export function DemandList() {
     }
   }
 
+  const emptyMessage = hasActiveDemandFilters(queryFilters)
+    ? "Nenhuma demanda encontrada com os filtros aplicados."
+    : "Nenhuma demanda registrada.";
+
   return (
     <>
       <PageHeader
@@ -175,6 +211,27 @@ export function DemandList() {
         }
       />
 
+      <DemandFiltersBar
+        filters={{ ...filters, search }}
+        onFiltersChange={(next) => {
+          setFilters({
+            status: next.status,
+            attendantId: next.attendantId,
+            requesterId: next.requesterId,
+            type: next.type,
+          });
+          setSearch(next.search ?? "");
+          setPage(1);
+        }}
+        attendants={attendants}
+        requesters={requesters}
+        pageSize={pageSize}
+        onPageSizeChange={(size) => {
+          setPageSize(size);
+          setPage(1);
+        }}
+      />
+
       {error && (
         <div className="mb-4 rounded-lg border border-red-400/30 bg-red-400/10 px-4 py-3 text-sm text-red-400">
           {error}
@@ -184,7 +241,7 @@ export function DemandList() {
       {loading ? (
         <EmptyState message="Carregando..." />
       ) : demands.length === 0 ? (
-        <EmptyState message="Nenhuma demanda registrada." />
+        <EmptyState message={emptyMessage} />
       ) : (
         <>
           <div className="hidden md:block overflow-x-auto rounded-xl border border-card-border">

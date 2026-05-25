@@ -3,6 +3,7 @@ import { supabase } from "@/lib/supabase/client";
 import type {
   DashboardStats,
   Demand,
+  DemandFilters,
   DemandFormData,
   PaginatedResult,
 } from "@/lib/types";
@@ -11,30 +12,103 @@ import { buildCompletionIso, calculateDurationMinutes } from "@/lib/utils";
 const demandSelect =
   "*, attendant:attendants(*), requester:requesters(*)";
 
-export async function getAllDemands(): Promise<Demand[]> {
-  const { data, error } = await supabase
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type DemandsQuery = any;
+
+async function buildSearchOrClause(term: string): Promise<string | null> {
+  const pattern = `%${term.trim()}%`;
+  const [requestersRes, attendantsRes] = await Promise.all([
+    supabase.from("requesters").select("id").ilike("name", pattern),
+    supabase.from("attendants").select("id").ilike("name", pattern),
+  ]);
+
+  if (requestersRes.error) throw requestersRes.error;
+  if (attendantsRes.error) throw attendantsRes.error;
+
+  const parts = [`comment.ilike.${pattern}`];
+  const requesterIds = requestersRes.data?.map((r) => r.id) ?? [];
+  const attendantIds = attendantsRes.data?.map((a) => a.id) ?? [];
+
+  if (requesterIds.length > 0) {
+    parts.push(`requester_id.in.(${requesterIds.join(",")})`);
+  }
+  if (attendantIds.length > 0) {
+    parts.push(`attendant_id.in.(${attendantIds.join(",")})`);
+  }
+
+  return parts.join(",");
+}
+
+function applyDemandFilters(
+  query: DemandsQuery,
+  filters?: DemandFilters
+): DemandsQuery {
+  if (!filters) return query;
+
+  if (filters.status) {
+    query = query.eq("status", filters.status);
+  }
+  if (filters.attendantId) {
+    query = query.eq("attendant_id", filters.attendantId);
+  }
+  if (filters.requesterId) {
+    query = query.eq("requester_id", filters.requesterId);
+  }
+  if (filters.type) {
+    query = query.eq("type", filters.type);
+  }
+
+  return query;
+}
+
+async function applySearchFilter(
+  query: DemandsQuery,
+  filters?: DemandFilters
+): Promise<DemandsQuery> {
+  const term = filters?.search?.trim();
+  if (!term) return query;
+
+  const orClause = await buildSearchOrClause(term);
+  if (!orClause) return query;
+
+  return query.or(orClause);
+}
+
+export async function getAllDemands(
+  filters?: DemandFilters
+): Promise<Demand[]> {
+  let query = supabase
     .from("demands")
     .select(demandSelect)
     .order("date", { ascending: false })
     .order("demand_time", { ascending: false });
 
+  query = applyDemandFilters(query, filters);
+  query = await applySearchFilter(query, filters);
+
+  const { data, error } = await query;
   if (error) throw error;
   return (data ?? []) as Demand[];
 }
 
 export async function getDemands(
   page = 1,
-  pageSize = PAGE_SIZE
+  pageSize = PAGE_SIZE,
+  filters?: DemandFilters
 ): Promise<PaginatedResult<Demand>> {
   const from = (page - 1) * pageSize;
   const to = from + pageSize - 1;
 
-  const { data, error, count } = await supabase
+  let query = supabase
     .from("demands")
     .select(demandSelect, { count: "exact" })
     .order("date", { ascending: false })
-    .order("demand_time", { ascending: false })
-    .range(from, to);
+    .order("demand_time", { ascending: false });
+
+  query = applyDemandFilters(query, filters);
+  query = await applySearchFilter(query, filters);
+
+  const { data, error, count } = await query.range(from, to);
 
   if (error) throw error;
 
