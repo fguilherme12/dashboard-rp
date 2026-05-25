@@ -101,7 +101,7 @@ export async function deleteDemand(id: string): Promise<void> {
 export async function getDashboardStats(): Promise<DashboardStats> {
   const { data, error } = await supabase
     .from("demands")
-    .select("status, demand_time, service_time, completion_time");
+    .select("status, date, demand_time, service_time, completion_time");
 
   if (error) throw error;
 
@@ -118,6 +118,7 @@ export async function getDashboardStats(): Promise<DashboardStats> {
     .filter((d) => d.status === "concluido" && d.completion_time)
     .map((d) =>
       calculateDurationMinutes(
+        d.date,
         d.demand_time,
         d.service_time,
         d.completion_time

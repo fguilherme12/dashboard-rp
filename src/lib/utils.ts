@@ -27,30 +27,60 @@ export function formatDateTimeBR(datetime: string | null | undefined): string {
   });
 }
 
+function parseLocalDateTime(date: string, time: string): Date {
+  return new Date(`${date}T${time.slice(0, 5)}:00`);
+}
+
+function toLocalDateString(d: Date): string {
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
+/** Minutos entre abertura da demanda e finalização (inclui dias entre as datas). */
 export function calculateDurationMinutes(
+  demandDate: string,
   demandTime: string,
   serviceTime: string | null,
   completionTime: string | null
 ): number | null {
   if (!completionTime) return null;
 
-  const baseTime = serviceTime ?? demandTime;
-  const [bh, bm] = baseTime.split(":").map(Number);
-  const completion = new Date(completionTime);
-  const ch = completion.getHours();
-  const cm = completion.getMinutes();
+  const end = new Date(completionTime);
+  let start = parseLocalDateTime(demandDate, demandTime);
 
-  let diff = ch * 60 + cm - (bh * 60 + bm);
-  if (diff < 0) diff += 24 * 60;
+  const sameDay = demandDate === toLocalDateString(end);
+  if (serviceTime && sameDay) {
+    const serviceStart = parseLocalDateTime(demandDate, serviceTime);
+    if (
+      serviceStart.getTime() >= start.getTime() &&
+      serviceStart.getTime() <= end.getTime()
+    ) {
+      start = serviceStart;
+    }
+  }
 
-  return diff;
+  const diffMs = end.getTime() - start.getTime();
+  if (diffMs < 0) return null;
+
+  return Math.round(diffMs / 60_000);
 }
 
 export function formatDuration(minutes: number | null): string {
   if (minutes === null) return "—";
   if (minutes < 60) return `${minutes}min`;
-  const h = Math.floor(minutes / 60);
-  const m = minutes % 60;
+
+  const days = Math.floor(minutes / (24 * 60));
+  const remainder = minutes % (24 * 60);
+  const h = Math.floor(remainder / 60);
+  const m = remainder % 60;
+
+  if (days > 0) {
+    const dayPart = days === 1 ? "1 dia" : `${days} dias`;
+    if (h === 0 && m === 0) return dayPart;
+    if (m > 0) return `${dayPart} ${h}h ${m}min`;
+    return h > 0 ? `${dayPart} ${h}h` : dayPart;
+  }
+
   return m > 0 ? `${h}h ${m}min` : `${h}h`;
 }
 

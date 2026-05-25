@@ -17,6 +17,7 @@ function escapeCsvCell(value: string): string {
 
 function demandToRow(demand: Demand): string[] {
   const duration = calculateDurationMinutes(
+    demand.date,
     demand.demand_time,
     demand.service_time,
     demand.completion_time

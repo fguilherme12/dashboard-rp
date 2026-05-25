@@ -39,6 +39,7 @@ export function DemandViewModal({
   onEdit,
 }: DemandViewModalProps) {
   const duration = calculateDurationMinutes(
+    demand.date,
     demand.demand_time,
     demand.service_time,
     demand.completion_time
