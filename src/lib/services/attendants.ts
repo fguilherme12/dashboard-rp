@@ -4,16 +4,23 @@ import type { Attendant, PaginatedResult } from "@/lib/types";
 
 export async function getAttendants(
   page = 1,
-  pageSize = PAGE_SIZE
+  pageSize = PAGE_SIZE,
+  search = ""
 ): Promise<PaginatedResult<Attendant>> {
   const from = (page - 1) * pageSize;
   const to = from + pageSize - 1;
 
-  const { data, error, count } = await supabase
+  let query = supabase
     .from("attendants")
     .select("*", { count: "exact" })
-    .order("name")
-    .range(from, to);
+    .order("name");
+
+  const term = search.trim();
+  if (term) {
+    query = query.ilike("name", `%${term}%`);
+  }
+
+  const { data, error, count } = await query.range(from, to);
 
   if (error) throw error;
 

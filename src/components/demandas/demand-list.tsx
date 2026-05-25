@@ -29,6 +29,7 @@ export function DemandList() {
   const [requesters, setRequesters] = useState<Requester[]>([]);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<Demand | null>(null);
@@ -51,6 +52,7 @@ export function DemandList() {
         if (!active) return;
         setDemands(demandsResult.data);
         setTotalPages(demandsResult.totalPages);
+        setTotalCount(demandsResult.count);
         setAttendants(attendantsList);
         setRequesters(requestersList);
       } catch (err) {
@@ -77,6 +79,7 @@ export function DemandList() {
     ]);
     setDemands(demandsResult.data);
     setTotalPages(demandsResult.totalPages);
+    setTotalCount(demandsResult.count);
     setAttendants(attendantsList);
     setRequesters(requestersList);
   }
@@ -333,7 +336,12 @@ export function DemandList() {
             ))}
           </div>
 
-          <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
+          <Pagination
+            page={page}
+            totalPages={totalPages}
+            totalCount={totalCount}
+            onPageChange={setPage}
+          />
         </>
       )}
 

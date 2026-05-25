@@ -38,6 +38,8 @@ export const STATUS_COLORS: Record<DemandStatus, string> = {
 };
 
 export const PAGE_SIZE = 10;
+export const PAGE_SIZE_OPTIONS = [10, 25, 50, 100] as const;
+export const SEARCH_DEBOUNCE_MS = 400;
 
 export const SEED_REQUESTER_NAMES = [
   "Adriano Correia",

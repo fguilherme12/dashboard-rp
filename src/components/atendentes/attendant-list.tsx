@@ -3,9 +3,12 @@
 import { AttendantModal } from "@/components/atendentes/attendant-modal";
 import { AlertDialog } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
-import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Card } from "@/components/ui/card";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { ListControls } from "@/components/ui/list-controls";
 import { EmptyState, PageHeader, Pagination } from "@/components/ui/pagination";
+import { useDebouncedValue } from "@/hooks/use-debounced-value";
+import { PAGE_SIZE, SEARCH_DEBOUNCE_MS } from "@/lib/constants";
 import {
   createAttendant,
   deleteAttendant,
@@ -20,7 +23,11 @@ import { useEffect, useState } from "react";
 export function AttendantList() {
   const [attendants, setAttendants] = useState<Attendant[]>([]);
   const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(PAGE_SIZE);
   const [totalPages, setTotalPages] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
+  const [search, setSearch] = useState("");
+  const debouncedSearch = useDebouncedValue(search, SEARCH_DEBOUNCE_MS);
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<Attendant | null>(null);
@@ -35,10 +42,11 @@ export function AttendantList() {
       setLoading(true);
       setError(null);
       try {
-        const result = await getAttendants(page);
+        const result = await getAttendants(page, pageSize, debouncedSearch);
         if (!active) return;
         setAttendants(result.data);
         setTotalPages(result.totalPages);
+        setTotalCount(result.count);
       } catch (err) {
         if (!active) return;
         setError(
@@ -53,12 +61,13 @@ export function AttendantList() {
     return () => {
       active = false;
     };
-  }, [page]);
+  }, [page, pageSize, debouncedSearch]);
 
   async function reload() {
-    const result = await getAttendants(page);
+    const result = await getAttendants(page, pageSize, debouncedSearch);
     setAttendants(result.data);
     setTotalPages(result.totalPages);
+    setTotalCount(result.count);
   }
 
   async function handleSave(name: string) {
@@ -93,8 +102,12 @@ export function AttendantList() {
     setModalOpen(true);
   }
 
+  const emptyMessage = debouncedSearch
+    ? `Nenhum atendente encontrado para "${debouncedSearch}".`
+    : "Nenhum atendente cadastrado.";
+
   return (
-  <>
+    <>
       <PageHeader
         title="Atendentes"
         subtitle="Gerencie os atendentes do CCO"
@@ -106,6 +119,20 @@ export function AttendantList() {
         }
       />
 
+      <ListControls
+        search={search}
+        onSearchChange={(value) => {
+          setSearch(value);
+          setPage(1);
+        }}
+        searchPlaceholder="Buscar atendente..."
+        pageSize={pageSize}
+        onPageSizeChange={(size) => {
+          setPageSize(size);
+          setPage(1);
+        }}
+      />
+
       {error && (
         <div className="mb-4 rounded-lg border border-red-400/30 bg-red-400/10 px-4 py-3 text-sm text-red-400">
           {error}
@@ -115,7 +142,7 @@ export function AttendantList() {
       {loading ? (
         <EmptyState message="Carregando..." />
       ) : attendants.length === 0 ? (
-        <EmptyState message="Nenhum atendente cadastrado." />
+        <EmptyState message={emptyMessage} />
       ) : (
         <>
           <div className="hidden md:block overflow-x-auto rounded-xl border border-card-border">
@@ -163,7 +190,10 @@ export function AttendantList() {
 
           <div className="md:hidden space-y-3">
             {attendants.map((attendant) => (
-              <Card key={attendant.id} className="flex items-center justify-between gap-3">
+              <Card
+                key={attendant.id}
+                className="flex items-center justify-between gap-3"
+              >
                 <div className="flex items-center gap-3 min-w-0">
                   <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-accent-green/15">
                     <User className="h-5 w-5 text-accent-green" />
@@ -176,7 +206,11 @@ export function AttendantList() {
                   </div>
                 </div>
                 <div className="flex gap-1 shrink-0">
-                  <Button variant="ghost" size="sm" onClick={() => openEdit(attendant)}>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => openEdit(attendant)}
+                  >
                     <Pencil className="h-4 w-4" />
                   </Button>
                   <Button
@@ -191,7 +225,12 @@ export function AttendantList() {
             ))}
           </div>
 
-          <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
+          <Pagination
+            page={page}
+            totalPages={totalPages}
+            totalCount={totalCount}
+            onPageChange={setPage}
+          />
         </>
       )}
 

@@ -5,7 +5,10 @@ import { AlertDialog } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { ListControls } from "@/components/ui/list-controls";
 import { EmptyState, PageHeader, Pagination } from "@/components/ui/pagination";
+import { useDebouncedValue } from "@/hooks/use-debounced-value";
+import { PAGE_SIZE, SEARCH_DEBOUNCE_MS } from "@/lib/constants";
 import {
   createRequester,
   deleteRequester,
@@ -20,7 +23,11 @@ import { useEffect, useState } from "react";
 export function RequesterList() {
   const [requesters, setRequesters] = useState<Requester[]>([]);
   const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(PAGE_SIZE);
   const [totalPages, setTotalPages] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
+  const [search, setSearch] = useState("");
+  const debouncedSearch = useDebouncedValue(search, SEARCH_DEBOUNCE_MS);
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<Requester | null>(null);
@@ -35,10 +42,11 @@ export function RequesterList() {
       setLoading(true);
       setError(null);
       try {
-        const result = await getRequesters(page);
+        const result = await getRequesters(page, pageSize, debouncedSearch);
         if (!active) return;
         setRequesters(result.data);
         setTotalPages(result.totalPages);
+        setTotalCount(result.count);
       } catch (err) {
         if (!active) return;
         setError(
@@ -53,12 +61,13 @@ export function RequesterList() {
     return () => {
       active = false;
     };
-  }, [page]);
+  }, [page, pageSize, debouncedSearch]);
 
   async function reload() {
-    const result = await getRequesters(page);
+    const result = await getRequesters(page, pageSize, debouncedSearch);
     setRequesters(result.data);
     setTotalPages(result.totalPages);
+    setTotalCount(result.count);
   }
 
   async function handleSave(name: string) {
@@ -93,6 +102,10 @@ export function RequesterList() {
     setModalOpen(true);
   }
 
+  const emptyMessage = debouncedSearch
+    ? `Nenhum solicitante encontrado para "${debouncedSearch}".`
+    : "Nenhum solicitante cadastrado.";
+
   return (
     <>
       <PageHeader
@@ -106,6 +119,20 @@ export function RequesterList() {
         }
       />
 
+      <ListControls
+        search={search}
+        onSearchChange={(value) => {
+          setSearch(value);
+          setPage(1);
+        }}
+        searchPlaceholder="Buscar solicitante..."
+        pageSize={pageSize}
+        onPageSizeChange={(size) => {
+          setPageSize(size);
+          setPage(1);
+        }}
+      />
+
       {error && (
         <div className="mb-4 rounded-lg border border-red-400/30 bg-red-400/10 px-4 py-3 text-sm text-red-400">
           {error}
@@ -115,7 +142,7 @@ export function RequesterList() {
       {loading ? (
         <EmptyState message="Carregando..." />
       ) : requesters.length === 0 ? (
-        <EmptyState message="Nenhum solicitante cadastrado." />
+        <EmptyState message={emptyMessage} />
       ) : (
         <>
           <div className="hidden md:block overflow-x-auto rounded-xl border border-card-border">
@@ -198,7 +225,12 @@ export function RequesterList() {
             ))}
           </div>
 
-          <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
+          <Pagination
+            page={page}
+            totalPages={totalPages}
+            totalCount={totalCount}
+            onPageChange={setPage}
+          />
         </>
       )}
 
