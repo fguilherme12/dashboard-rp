@@ -8,7 +8,7 @@ import { Card } from "@/components/ui/card";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { EmptyState, PageHeader, Pagination } from "@/components/ui/pagination";
 import { Select } from "@/components/ui/select";
-import { STATUS_COLORS, STATUS_LABELS } from "@/lib/constants";
+import { STATUS_COLORS, STATUS_LABELS, TYPE_LABELS } from "@/lib/constants";
 import { getAllAttendants } from "@/lib/services/attendants";
 import {
   createDemand,
@@ -16,8 +16,9 @@ import {
   getDemands,
   updateDemand,
 } from "@/lib/services/demands";
-import type { Attendant, Demand, DemandFormData } from "@/lib/types";
-import { formatDateBR, formatTime } from "@/lib/utils";
+import { getAllRequesters } from "@/lib/services/requesters";
+import type { Attendant, Demand, DemandFormData, Requester } from "@/lib/types";
+import { formatDateBR, formatDateTimeBR, formatTime } from "@/lib/utils";
 import { Eye, Pencil, Plus, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
@@ -25,6 +26,7 @@ import { useEffect, useState } from "react";
 export function DemandList() {
   const [demands, setDemands] = useState<Demand[]>([]);
   const [attendants, setAttendants] = useState<Attendant[]>([]);
+  const [requesters, setRequesters] = useState<Requester[]>([]);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [loading, setLoading] = useState(true);
@@ -41,14 +43,16 @@ export function DemandList() {
       setLoading(true);
       setError(null);
       try {
-        const [demandsResult, attendantsList] = await Promise.all([
+        const [demandsResult, attendantsList, requestersList] = await Promise.all([
           getDemands(page),
           getAllAttendants(),
+          getAllRequesters(),
         ]);
         if (!active) return;
         setDemands(demandsResult.data);
         setTotalPages(demandsResult.totalPages);
         setAttendants(attendantsList);
+        setRequesters(requestersList);
       } catch (err) {
         if (!active) return;
         setError(
@@ -66,13 +70,15 @@ export function DemandList() {
   }, [page]);
 
   async function reload() {
-    const [demandsResult, attendantsList] = await Promise.all([
+    const [demandsResult, attendantsList, requestersList] = await Promise.all([
       getDemands(page),
       getAllAttendants(),
+      getAllRequesters(),
     ]);
     setDemands(demandsResult.data);
     setTotalPages(demandsResult.totalPages);
     setAttendants(attendantsList);
+    setRequesters(requestersList);
   }
 
   async function handleSave(data: DemandFormData) {
@@ -156,6 +162,7 @@ export function DemandList() {
                   <th className="px-4 py-3">Solicitante</th>
                   <th className="px-4 py-3">Atendente</th>
                   <th className="px-4 py-3">Status</th>
+                  <th className="px-4 py-3">Finalização</th>
                   <th className="px-4 py-3 text-right">Ações</th>
                 </tr>
               </thead>
@@ -169,10 +176,12 @@ export function DemandList() {
                     <td className="px-4 py-3">{formatTime(demand.demand_time)}</td>
                     <td className="px-4 py-3">
                       <Badge className="border-accent-blue/50 bg-accent-blue/10 text-accent-blue">
-                        {demand.type}
+                        {TYPE_LABELS[demand.type]}
                       </Badge>
                     </td>
-                    <td className="px-4 py-3 font-medium">{demand.requester}</td>
+                    <td className="px-4 py-3 font-medium">
+                      {demand.requester?.name ?? "—"}
+                    </td>
                     <td className="px-4 py-3 min-w-[160px]">
                       <Select
                         value={demand.attendant_id ?? ""}
@@ -207,6 +216,9 @@ export function DemandList() {
                           </option>
                         ))}
                       </Select>
+                    </td>
+                    <td className="px-4 py-3 text-xs text-muted whitespace-nowrap">
+                      {formatDateTimeBR(demand.completion_time)}
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex justify-end gap-1">
@@ -244,13 +256,13 @@ export function DemandList() {
               <Card key={demand.id} className="space-y-3">
                 <div className="flex items-start justify-between gap-2">
                   <div>
-                    <p className="font-medium">{demand.requester}</p>
+                    <p className="font-medium">{demand.requester?.name ?? "—"}</p>
                     <p className="text-xs text-muted mt-0.5">
                       {formatDateBR(demand.date)} · {formatTime(demand.demand_time)}
                     </p>
                   </div>
                   <Badge className="border-accent-blue/50 bg-accent-blue/10 text-accent-blue shrink-0">
-                    {demand.type}
+                    {TYPE_LABELS[demand.type]}
                   </Badge>
                 </div>
 
@@ -290,6 +302,11 @@ export function DemandList() {
                       ))}
                     </Select>
                   </Field>
+                  <Field label="Finalização">
+                    <span className="text-xs text-muted">
+                      {formatDateTimeBR(demand.completion_time)}
+                    </span>
+                  </Field>
                 </div>
 
                 <div className="flex justify-end gap-2 pt-1">
@@ -326,6 +343,7 @@ export function DemandList() {
         onSave={handleSave}
         demand={editing}
         attendants={attendants}
+        requesters={requesters}
       />
 
       <ConfirmDialog

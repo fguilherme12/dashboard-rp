@@ -3,7 +3,7 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Modal } from "@/components/ui/modal";
-import { STATUS_COLORS, STATUS_LABELS } from "@/lib/constants";
+import { STATUS_COLORS, STATUS_LABELS, TYPE_LABELS } from "@/lib/constants";
 import type { Demand } from "@/lib/types";
 import {
   calculateDurationMinutes,
@@ -57,15 +57,12 @@ export function DemandViewModal({
         label="Tipo"
         value={
           <Badge className="border-accent-blue/50 bg-accent-blue/10 text-accent-blue">
-            {demand.type}
+            {TYPE_LABELS[demand.type]}
           </Badge>
         }
       />
-      <DetailRow label="Solicitante" value={demand.requester} />
-      <DetailRow
-        label="Atendente"
-        value={demand.attendant?.name ?? "—"}
-      />
+      <DetailRow label="Solicitante" value={demand.requester?.name ?? "—"} />
+      <DetailRow label="Atendente" value={demand.attendant?.name ?? "—"} />
       <DetailRow
         label="Hora Atendida"
         value={formatTime(demand.service_time)}

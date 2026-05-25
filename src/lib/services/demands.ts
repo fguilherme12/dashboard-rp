@@ -8,6 +8,9 @@ import type {
 } from "@/lib/types";
 import { calculateDurationMinutes } from "@/lib/utils";
 
+const demandSelect =
+  "*, attendant:attendants(*), requester:requesters(*)";
+
 export async function getDemands(
   page = 1,
   pageSize = PAGE_SIZE
@@ -17,7 +20,7 @@ export async function getDemands(
 
   const { data, error, count } = await supabase
     .from("demands")
-    .select("*, attendant:attendants(*)", { count: "exact" })
+    .select(demandSelect, { count: "exact" })
     .order("date", { ascending: false })
     .order("demand_time", { ascending: false })
     .range(from, to);
@@ -40,7 +43,7 @@ export async function createDemand(form: DemandFormData): Promise<Demand> {
   const { data, error } = await supabase
     .from("demands")
     .insert(payload)
-    .select("*, attendant:attendants(*)")
+    .select(demandSelect)
     .single();
 
   if (error) throw error;
@@ -57,7 +60,7 @@ export async function updateDemand(
     .from("demands")
     .update(payload)
     .eq("id", id)
-    .select("*, attendant:attendants(*)")
+    .select(demandSelect)
     .single();
 
   if (error) throw error;
@@ -67,7 +70,7 @@ export async function updateDemand(
 export async function getDemandById(id: string): Promise<Demand | null> {
   const { data, error } = await supabase
     .from("demands")
-    .select("*, attendant:attendants(*)")
+    .select(demandSelect)
     .eq("id", id)
     .single();
 
@@ -97,10 +100,11 @@ export async function getDashboardStats(): Promise<DashboardStats> {
   const emAtendimento = demands.filter(
     (d) => d.status === "em_atendimento"
   ).length;
-  const finalizadas = demands.filter((d) => d.status === "finalizada").length;
+  const concluidas = demands.filter((d) => d.status === "concluido").length;
+  const canceladas = demands.filter((d) => d.status === "cancelada").length;
 
   const durations = demands
-    .filter((d) => d.status === "finalizada" && d.completion_time)
+    .filter((d) => d.status === "concluido" && d.completion_time)
     .map((d) =>
       calculateDurationMinutes(
         d.demand_time,
@@ -115,7 +119,7 @@ export async function getDashboardStats(): Promise<DashboardStats> {
       ? Math.round(durations.reduce((a, b) => a + b, 0) / durations.length)
       : null;
 
-  return { total, pendentes, emAtendimento, finalizadas, mediaTempoMinutos };
+  return { total, pendentes, emAtendimento, concluidas, canceladas, mediaTempoMinutos };
 }
 
 function buildPayload(form: Partial<DemandFormData>) {
@@ -125,11 +129,11 @@ function buildPayload(form: Partial<DemandFormData>) {
     payload.service_time = null;
   }
 
-  if (form.status === "finalizada") {
+  if (form.status === "concluido") {
     payload.completion_time = new Date().toISOString();
   }
 
-  if (form.status === "pendente") {
+  if (form.status === "pendente" || form.status === "em_atendimento") {
     payload.completion_time = null;
   }
 

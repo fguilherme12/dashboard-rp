@@ -6,12 +6,18 @@ export interface Attendant {
   created_at: string;
 }
 
+export interface Requester {
+  id: string;
+  name: string;
+  created_at: string;
+}
+
 export interface Demand {
   id: string;
   date: string;
   demand_time: string;
   type: DemandType;
-  requester: string;
+  requester_id: string | null;
   attendant_id: string | null;
   service_time: string | null;
   completion_time: string | null;
@@ -19,13 +25,14 @@ export interface Demand {
   comment: string | null;
   created_at: string;
   attendant?: Attendant | null;
+  requester?: Requester | null;
 }
 
 export interface DemandFormData {
   date: string;
   demand_time: string;
   type: DemandType;
-  requester: string;
+  requester_id: string | null;
   attendant_id: string | null;
   service_time: string | null;
   status: DemandStatus;
@@ -36,7 +43,8 @@ export interface DashboardStats {
   total: number;
   pendentes: number;
   emAtendimento: number;
-  finalizadas: number;
+  concluidas: number;
+  canceladas: number;
   mediaTempoMinutos: number | null;
 }
 

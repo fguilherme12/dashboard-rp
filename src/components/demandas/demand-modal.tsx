@@ -9,14 +9,16 @@ import {
   DEMAND_STATUSES,
   DEMAND_TYPES,
   STATUS_LABELS,
+  TYPE_LABELS,
 } from "@/lib/constants";
-import type { Attendant, Demand, DemandFormData } from "@/lib/types";
+import type { Attendant, Demand, DemandFormData, Requester } from "@/lib/types";
 import { getCurrentDateISO, getCurrentTime } from "@/lib/utils";
 import { useState } from "react";
 
 interface DemandFormProps {
   demand?: Demand | null;
   attendants: Attendant[];
+  requesters: Requester[];
   onSave: (data: DemandFormData) => Promise<void>;
   onClose: () => void;
 }
@@ -27,7 +29,7 @@ function buildInitialForm(demand?: Demand | null): DemandFormData {
       date: demand.date,
       demand_time: demand.demand_time.slice(0, 5),
       type: demand.type,
-      requester: demand.requester,
+      requester_id: demand.requester_id,
       attendant_id: demand.attendant_id,
       service_time: demand.service_time?.slice(0, 5) ?? null,
       status: demand.status,
@@ -38,8 +40,8 @@ function buildInitialForm(demand?: Demand | null): DemandFormData {
   return {
     date: getCurrentDateISO(),
     demand_time: getCurrentTime(),
-    type: "TMS",
-    requester: "",
+    type: "tracking",
+    requester_id: null,
     attendant_id: null,
     service_time: null,
     status: "pendente",
@@ -47,7 +49,13 @@ function buildInitialForm(demand?: Demand | null): DemandFormData {
   };
 }
 
-function DemandForm({ demand, attendants, onSave, onClose }: DemandFormProps) {
+function DemandForm({
+  demand,
+  attendants,
+  requesters,
+  onSave,
+  onClose,
+}: DemandFormProps) {
   const [form, setForm] = useState<DemandFormData>(() => buildInitialForm(demand));
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -61,7 +69,7 @@ function DemandForm({ demand, attendants, onSave, onClose }: DemandFormProps) {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!form.requester.trim()) {
+    if (!form.requester_id) {
       setError("Solicitante é obrigatório");
       return;
     }
@@ -114,7 +122,7 @@ function DemandForm({ demand, attendants, onSave, onClose }: DemandFormProps) {
           >
             {DEMAND_TYPES.map((t) => (
               <option key={t} value={t}>
-                {t}
+                {TYPE_LABELS[t]}
               </option>
             ))}
           </Select>
@@ -140,12 +148,19 @@ function DemandForm({ demand, attendants, onSave, onClose }: DemandFormProps) {
           <label className="mb-1.5 block text-xs font-medium uppercase tracking-wider text-muted">
             Solicitante
           </label>
-          <Input
-            value={form.requester}
-            onChange={(e) => updateField("requester", e.target.value)}
-            placeholder="Nome do solicitante"
-            required
-          />
+          <Select
+            value={form.requester_id ?? ""}
+            onChange={(e) =>
+              updateField("requester_id", e.target.value || null)
+            }
+          >
+            <option value="">Selecione o solicitante</option>
+            {requesters.map((r) => (
+              <option key={r.id} value={r.id}>
+                {r.name}
+              </option>
+            ))}
+          </Select>
         </div>
         <div>
           <label className="mb-1.5 block text-xs font-medium uppercase tracking-wider text-muted">
@@ -210,6 +225,7 @@ interface DemandModalProps {
   onSave: (data: DemandFormData) => Promise<void>;
   demand?: Demand | null;
   attendants: Attendant[];
+  requesters: Requester[];
 }
 
 export function DemandModal({
@@ -218,6 +234,7 @@ export function DemandModal({
   onSave,
   demand,
   attendants,
+  requesters,
 }: DemandModalProps) {
   return (
     <Modal
@@ -231,6 +248,7 @@ export function DemandModal({
           key={demand?.id ?? "new"}
           demand={demand}
           attendants={attendants}
+          requesters={requesters}
           onSave={onSave}
           onClose={onClose}
         />

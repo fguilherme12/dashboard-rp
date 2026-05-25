@@ -41,8 +41,8 @@ export function StatsCards({ stats, action }: StatsCardsProps) {
       iconColor: "text-accent-blue",
     },
     {
-      label: "Finalizadas",
-      value: stats.finalizadas,
+      label: "Concluídas",
+      value: stats.concluidas,
       icon: CheckCircle2,
       color: "text-accent-green",
       iconColor: "text-accent-green",

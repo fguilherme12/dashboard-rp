@@ -6,7 +6,8 @@ import { AlertDialog } from "@/components/ui/alert-dialog";
 import { EmptyState } from "@/components/ui/pagination";
 import { getAllAttendants } from "@/lib/services/attendants";
 import { getDemandById, updateDemand } from "@/lib/services/demands";
-import type { Attendant, Demand, DemandFormData } from "@/lib/types";
+import { getAllRequesters } from "@/lib/services/requesters";
+import type { Attendant, Demand, DemandFormData, Requester } from "@/lib/types";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
@@ -18,6 +19,7 @@ export function DemandDetailPage({ id }: DemandDetailPageProps) {
   const router = useRouter();
   const [demand, setDemand] = useState<Demand | null>(null);
   const [attendants, setAttendants] = useState<Attendant[]>([]);
+  const [requesters, setRequesters] = useState<Requester[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [editOpen, setEditOpen] = useState(false);
@@ -30,9 +32,10 @@ export function DemandDetailPage({ id }: DemandDetailPageProps) {
       setLoading(true);
       setError(null);
       try {
-        const [demandData, attendantsList] = await Promise.all([
+        const [demandData, attendantsList, requestersList] = await Promise.all([
           getDemandById(id),
           getAllAttendants(),
+          getAllRequesters(),
         ]);
         if (!active) return;
         if (!demandData) {
@@ -41,6 +44,7 @@ export function DemandDetailPage({ id }: DemandDetailPageProps) {
         }
         setDemand(demandData);
         setAttendants(attendantsList);
+        setRequesters(requestersList);
       } catch (err) {
         if (!active) return;
         setError(
@@ -99,6 +103,7 @@ export function DemandDetailPage({ id }: DemandDetailPageProps) {
         onSave={handleSave}
         demand={demand}
         attendants={attendants}
+        requesters={requesters}
       />
 
       <AlertDialog

@@ -5,6 +5,7 @@ import {
   ClipboardList,
   LayoutDashboard,
   Menu,
+  UserCircle,
   Users,
   X,
 } from "lucide-react";
@@ -15,6 +16,7 @@ import { useState } from "react";
 const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/atendentes", label: "Atendentes", icon: Users },
+  { href: "/solicitantes", label: "Solicitantes", icon: UserCircle },
   { href: "/demandas", label: "Demandas", icon: ClipboardList },
 ];
 

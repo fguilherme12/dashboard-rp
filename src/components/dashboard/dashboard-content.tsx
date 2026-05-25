@@ -6,7 +6,13 @@ import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/pagination";
 import { getAllAttendants } from "@/lib/services/attendants";
 import { createDemand, getDashboardStats } from "@/lib/services/demands";
-import type { Attendant, DashboardStats, DemandFormData } from "@/lib/types";
+import { getAllRequesters } from "@/lib/services/requesters";
+import type {
+  Attendant,
+  DashboardStats,
+  DemandFormData,
+  Requester,
+} from "@/lib/types";
 import { Plus } from "lucide-react";
 import { useEffect, useState } from "react";
 
@@ -14,13 +20,15 @@ const emptyStats: DashboardStats = {
   total: 0,
   pendentes: 0,
   emAtendimento: 0,
-  finalizadas: 0,
+  concluidas: 0,
+  canceladas: 0,
   mediaTempoMinutos: null,
 };
 
 export function DashboardContent() {
   const [stats, setStats] = useState<DashboardStats>(emptyStats);
   const [attendants, setAttendants] = useState<Attendant[]>([]);
+  const [requesters, setRequesters] = useState<Requester[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
@@ -35,13 +43,15 @@ export function DashboardContent() {
 
     async function load() {
       try {
-        const [statsData, attendantsList] = await Promise.all([
+        const [statsData, attendantsList, requestersList] = await Promise.all([
           getDashboardStats(),
           getAllAttendants(),
+          getAllRequesters(),
         ]);
         if (!active) return;
         setStats(statsData);
         setAttendants(attendantsList);
+        setRequesters(requestersList);
       } catch (err) {
         if (!active) return;
         setError(
@@ -90,6 +100,7 @@ export function DashboardContent() {
         onClose={() => setModalOpen(false)}
         onSave={handleSave}
         attendants={attendants}
+        requesters={requesters}
       />
     </>
   );

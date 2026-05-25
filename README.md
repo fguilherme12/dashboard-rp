@@ -4,10 +4,11 @@ Dashboard Next.js para gestão de demandas e atendentes do CCO, com persistênci
 
 ## Funcionalidades
 
-- **Dashboard** — cards com total, pendentes, em atendimento, finalizadas e média de tempo
+- **Dashboard** — cards com total, pendentes, em atendimento, concluídas e média de tempo
 - **Atendentes** — CRUD completo com modal, paginação e cards no mobile
-- **Demandas** — CRUD completo com edição inline (atendente, status, comentário), paginação e cards no mobile
-- **Sidebar** — navegação entre rotas `/dashboard`, `/atendentes` e `/demandas`
+- **Solicitantes** — CRUD completo (mesmo padrão dos atendentes)
+- **Demandas** — CRUD com tipos/status atualizados, edição inline, coluna de finalização e visualização por ID
+- **Sidebar** — navegação entre `/dashboard`, `/atendentes`, `/solicitantes` e `/demandas`
 
 ## Stack
 
@@ -28,8 +29,11 @@ npm install
 ### 2. Configurar Supabase
 
 1. Crie um projeto em [supabase.com](https://supabase.com)
-2. No **SQL Editor**, execute o script `supabase/schema.sql`
-3. Em **Project Settings → API**, copie a URL e a chave `anon public`
+2. No **SQL Editor**:
+   - Projeto **novo**: execute `supabase/schema.sql`
+   - Projeto **já existente**: execute `supabase/migration-v2.sql`
+3. (Opcional) Rode o seed local: `npm run seed:requesters`
+4. Em **Project Settings → API**, copie a URL e a chave `anon public`
 
 ### 3. Variáveis de ambiente
 
@@ -70,18 +74,25 @@ Acesse [http://localhost:3000](http://localhost:3000)
 | name | TEXT |
 | created_at | TIMESTAMPTZ |
 
+### `requesters`
+| Campo | Tipo |
+|-------|------|
+| id | UUID |
+| name | TEXT (único) |
+| created_at | TIMESTAMPTZ |
+
 ### `demands`
 | Campo | Tipo |
 |-------|------|
 | id | UUID |
 | date | DATE |
 | demand_time | TIME |
-| type | TEXT (`TMS`, `TMS+CSV`) |
-| requester | TEXT |
+| type | TEXT (`tracking`, `conversao`, `pdf`, `tracking_conversao`, `atualizacao_status`) |
+| requester_id | UUID (FK) |
 | attendant_id | UUID (FK) |
 | service_time | TIME |
 | completion_time | TIMESTAMPTZ |
-| status | TEXT (`pendente`, `em_atendimento`, `finalizada`) |
+| status | TEXT (`pendente`, `em_atendimento`, `concluido`, `cancelada`) |
 | comment | TEXT |
 | created_at | TIMESTAMPTZ |
 
