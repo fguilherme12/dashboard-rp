@@ -77,14 +77,14 @@ async function applySearchFilter(
 export async function getAllDemands(
   filters?: DemandFilters
 ): Promise<Demand[]> {
-  let query = supabase
-    .from("demands")
-    .select(demandSelect)
-    .order("date", { ascending: false })
-    .order("demand_time", { ascending: false });
+  let query = supabase.from("demands").select(demandSelect);
 
   query = applyDemandFilters(query, filters);
   query = await applySearchFilter(query, filters);
+
+  query = query
+    .order("date", { ascending: false })
+    .order("demand_time", { ascending: false });
 
   const { data, error } = await query;
   if (error) throw error;
@@ -101,12 +101,14 @@ export async function getDemands(
 
   let query = supabase
     .from("demands")
-    .select(demandSelect, { count: "exact" })
-    .order("date", { ascending: false })
-    .order("demand_time", { ascending: false });
+    .select(demandSelect, { count: "exact" });
 
   query = applyDemandFilters(query, filters);
   query = await applySearchFilter(query, filters);
+
+  query = query
+    .order("date", { ascending: false })
+    .order("demand_time", { ascending: false });
 
   const { data, error, count } = await query.range(from, to);
 
