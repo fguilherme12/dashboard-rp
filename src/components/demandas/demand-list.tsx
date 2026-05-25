@@ -10,16 +10,18 @@ import { EmptyState, PageHeader, Pagination } from "@/components/ui/pagination";
 import { Select } from "@/components/ui/select";
 import { STATUS_COLORS, STATUS_LABELS, TYPE_LABELS } from "@/lib/constants";
 import { getAllAttendants } from "@/lib/services/attendants";
+import { downloadDemandsCsv } from "@/lib/export-demands-csv";
 import {
   createDemand,
   deleteDemand,
+  getAllDemands,
   getDemands,
   updateDemand,
 } from "@/lib/services/demands";
 import { getAllRequesters } from "@/lib/services/requesters";
 import type { Attendant, Demand, DemandFormData, Requester } from "@/lib/types";
 import { formatDateBR, formatDateTimeBR, formatTime } from "@/lib/utils";
-import { Eye, Pencil, Plus, Trash2 } from "lucide-react";
+import { Download, Eye, Pencil, Plus, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
@@ -36,6 +38,7 @@ export function DemandList() {
   const [error, setError] = useState<string | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [alertMessage, setAlertMessage] = useState<string | null>(null);
+  const [exporting, setExporting] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -130,16 +133,45 @@ export function DemandList() {
     setModalOpen(true);
   }
 
+  async function handleExportCsv() {
+    setExporting(true);
+    setError(null);
+    try {
+      const allDemands = await getAllDemands();
+      if (allDemands.length === 0) {
+        setAlertMessage("Não há demandas para exportar.");
+        return;
+      }
+      downloadDemandsCsv(allDemands);
+    } catch (err) {
+      setAlertMessage(
+        err instanceof Error ? err.message : "Erro ao exportar demandas"
+      );
+    } finally {
+      setExporting(false);
+    }
+  }
+
   return (
     <>
       <PageHeader
         title="Demandas"
         subtitle="Gerencie as demandas de atendimento"
         action={
-          <Button onClick={openCreate}>
-            <Plus className="h-4 w-4" />
-            Nova Demanda
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              variant="secondary"
+              onClick={handleExportCsv}
+              disabled={exporting || loading}
+            >
+              <Download className="h-4 w-4" />
+              {exporting ? "Exportando..." : "Exportar CSV"}
+            </Button>
+            <Button onClick={openCreate}>
+              <Plus className="h-4 w-4" />
+              Nova Demanda
+            </Button>
+          </div>
         }
       />
 

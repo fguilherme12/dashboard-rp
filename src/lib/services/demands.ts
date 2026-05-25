@@ -11,6 +11,17 @@ import { calculateDurationMinutes } from "@/lib/utils";
 const demandSelect =
   "*, attendant:attendants(*), requester:requesters(*)";
 
+export async function getAllDemands(): Promise<Demand[]> {
+  const { data, error } = await supabase
+    .from("demands")
+    .select(demandSelect)
+    .order("date", { ascending: false })
+    .order("demand_time", { ascending: false });
+
+  if (error) throw error;
+  return (data ?? []) as Demand[];
+}
+
 export async function getDemands(
   page = 1,
   pageSize = PAGE_SIZE
