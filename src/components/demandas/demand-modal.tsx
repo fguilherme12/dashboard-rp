@@ -12,7 +12,11 @@ import {
   TYPE_LABELS,
 } from "@/lib/constants";
 import type { Attendant, Demand, DemandFormData, Requester } from "@/lib/types";
-import { getCurrentDateISO, getCurrentTime } from "@/lib/utils";
+import {
+  getCurrentDateISO,
+  getCurrentTime,
+  parseCompletionFromIso,
+} from "@/lib/utils";
 import { useState } from "react";
 
 interface DemandFormProps {
@@ -25,6 +29,11 @@ interface DemandFormProps {
 
 function buildInitialForm(demand?: Demand | null): DemandFormData {
   if (demand) {
+    const completion = parseCompletionFromIso(
+      demand.completion_time,
+      demand.date
+    );
+
     return {
       date: demand.date,
       demand_time: demand.demand_time.slice(0, 5),
@@ -32,6 +41,8 @@ function buildInitialForm(demand?: Demand | null): DemandFormData {
       requester_id: demand.requester_id,
       attendant_id: demand.attendant_id,
       service_time: demand.service_time?.slice(0, 5) ?? null,
+      completion_date: completion.completion_date,
+      completion_time_only: completion.completion_time_only,
       status: demand.status,
       comment: demand.comment,
     };
@@ -44,6 +55,8 @@ function buildInitialForm(demand?: Demand | null): DemandFormData {
     requester_id: null,
     attendant_id: null,
     service_time: null,
+    completion_date: null,
+    completion_time_only: null,
     status: "pendente",
     comment: null,
   };
@@ -60,17 +73,41 @@ function DemandForm({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const isConcluido = form.status === "concluido";
+
   function updateField<K extends keyof DemandFormData>(
     key: K,
     value: DemandFormData[K]
   ) {
-    setForm((prev) => ({ ...prev, [key]: value }));
+    setForm((prev) => {
+      const next = { ...prev, [key]: value };
+
+      if (key === "status" && value === "concluido") {
+        if (!prev.completion_date) {
+          next.completion_date = prev.date;
+        }
+        if (!prev.completion_time_only) {
+          next.completion_time_only = getCurrentTime();
+        }
+      }
+
+      if (key === "status" && (value === "pendente" || value === "em_atendimento")) {
+        next.completion_date = null;
+        next.completion_time_only = null;
+      }
+
+      return next;
+    });
   }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!form.requester_id) {
       setError("Solicitante é obrigatório");
+      return;
+    }
+    if (isConcluido && (!form.completion_date || !form.completion_time_only)) {
+      setError("Informe a data e hora de finalização");
       return;
     }
     setLoading(true);
@@ -191,7 +228,45 @@ function DemandForm({
               updateField("service_time", e.target.value || null)
             }
           />
+          <p className="mt-1 text-xs text-muted">
+            Quando o atendimento começou
+          </p>
         </div>
+
+        {isConcluido && (
+          <>
+            <div>
+              <label className="mb-1.5 block text-xs font-medium uppercase tracking-wider text-muted">
+                Data Finalização
+              </label>
+              <Input
+                type="date"
+                value={form.completion_date ?? ""}
+                onChange={(e) =>
+                  updateField("completion_date", e.target.value || null)
+                }
+                required
+              />
+            </div>
+            <div>
+              <label className="mb-1.5 block text-xs font-medium uppercase tracking-wider text-muted">
+                Hora Finalização
+              </label>
+              <Input
+                type="time"
+                value={form.completion_time_only ?? ""}
+                onChange={(e) =>
+                  updateField("completion_time_only", e.target.value || null)
+                }
+                required
+              />
+              <p className="mt-1 text-xs text-muted">
+                Quando a demanda foi concluída (ex.: sexta às 09:19)
+              </p>
+            </div>
+          </>
+        )}
+
         <div className="sm:col-span-2">
           <label className="mb-1.5 block text-xs font-medium uppercase tracking-wider text-muted">
             Comentário (opcional)

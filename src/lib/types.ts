@@ -35,6 +35,8 @@ export interface DemandFormData {
   requester_id: string | null;
   attendant_id: string | null;
   service_time: string | null;
+  completion_date: string | null;
+  completion_time_only: string | null;
   status: DemandStatus;
   comment: string | null;
 }

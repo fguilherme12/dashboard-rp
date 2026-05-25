@@ -71,3 +71,27 @@ export function getCurrentTime(): string {
 export function getCurrentDateISO(): string {
   return new Date().toISOString().split("T")[0];
 }
+
+export function parseCompletionFromIso(
+  completionTime: string | null,
+  fallbackDate: string
+): { completion_date: string; completion_time_only: string | null } {
+  if (!completionTime) {
+    return { completion_date: fallbackDate, completion_time_only: null };
+  }
+
+  const d = new Date(completionTime);
+  const pad = (n: number) => String(n).padStart(2, "0");
+
+  return {
+    completion_date: `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`,
+    completion_time_only: `${pad(d.getHours())}:${pad(d.getMinutes())}`,
+  };
+}
+
+export function buildCompletionIso(
+  date: string,
+  time: string
+): string {
+  return new Date(`${date}T${time}:00`).toISOString();
+}

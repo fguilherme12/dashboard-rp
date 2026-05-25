@@ -6,7 +6,7 @@ import type {
   DemandFormData,
   PaginatedResult,
 } from "@/lib/types";
-import { calculateDurationMinutes } from "@/lib/utils";
+import { buildCompletionIso, calculateDurationMinutes } from "@/lib/utils";
 
 const demandSelect =
   "*, attendant:attendants(*), requester:requesters(*)";
@@ -136,12 +136,32 @@ export async function getDashboardStats(): Promise<DashboardStats> {
 function buildPayload(form: Partial<DemandFormData>) {
   const payload: Record<string, unknown> = { ...form };
 
+  delete payload.completion_date;
+  delete payload.completion_time_only;
+
   if (form.service_time === "") {
     payload.service_time = null;
   }
 
   if (form.status === "concluido") {
-    payload.completion_time = new Date().toISOString();
+    const hasCompletionDate =
+      form.completion_date != null && form.completion_date !== "";
+    const hasCompletionTime =
+      form.completion_time_only != null && form.completion_time_only !== "";
+
+    if (hasCompletionDate && hasCompletionTime) {
+      payload.completion_time = buildCompletionIso(
+        form.completion_date!,
+        form.completion_time_only!
+      );
+    } else if (
+      form.completion_date === undefined &&
+      form.completion_time_only === undefined
+    ) {
+      // Ex.: mudança rápida de status na tabela — usa o momento atual
+      payload.completion_time = new Date().toISOString();
+    }
+    // Se o formulário enviou data/hora de finalização (edição), não sobrescreve com "agora"
   }
 
   if (form.status === "pendente" || form.status === "em_atendimento") {
